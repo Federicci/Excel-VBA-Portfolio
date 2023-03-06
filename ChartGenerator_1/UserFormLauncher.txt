@@ -1,0 +1,60 @@
+'@Written by Ricci, Federico
+
+Sub generate_Graphs()
+
+'
+'Initializes the user forms for user interaction
+'
+
+On Error GoTo NoHayDerogs
+Dim ws As Worksheet
+Set ws = ActiveWorkbook.Worksheets("Derogs")
+ws.Activate
+
+'ComboBox initialization
+FiltroDerogs.ComboBoxFam.Clear
+
+FiltroDerogs.ComboBoxFam.AddItem "(All families)"
+'By default all families are selected
+FiltroDerogs.ComboBoxFam.Value = FiltroDerogs.ComboBoxFam.List(0)
+
+Dim check As Boolean 'Boolean for avoiding names repeating
+'Families filling
+
+For i = fila_Etiquetas + 1 To fila_Fin
+    check = True
+    For j = 0 To FiltroDerogs.ComboBoxFam.ListCount - 1
+        If FiltroDerogs.ComboBoxFam.List(j) = CStr(rangoGlobal_Derogs.Cells(i, colum_Familia)) Then
+            check = False
+        End If
+    Next j
+    If check = True Then
+        FiltroDerogs.ComboBoxFam.AddItem CStr(rangoGlobal_Derogs.Cells(i, colum_Familia))
+    End If
+Next i
+
+'Projects filling
+
+For k = fila_Etiquetas + 1 To fila_Fin
+    check = True
+    For l = 0 To FiltroDerogs.ListBoxAdd.ListCount - 1
+        If FiltroDerogs.ListBoxAdd.List(l) = CStr(rangoGlobal_Derogs.Cells(k, colum_Proyec)) Then
+            check = False
+        End If
+    Next l
+    If check = True Then
+        FiltroDerogs.ListBoxAdd.AddItem CStr(rangoGlobal_Derogs.Cells(k, colum_Proyec))
+    End If
+Next k
+
+FiltroDerogs.ListBoxAdd.MultiSelect = 1
+FiltroDerogs.ListBoxRem.MultiSelect = 1
+
+'Mostrar interfaz con el usuario
+FiltroDerogs.Show
+
+Exit Sub
+
+NoHayDerogs:
+    MsgBox ("There is no DFS Register loaded")
+End Sub
