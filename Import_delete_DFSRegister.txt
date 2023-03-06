@@ -1,0 +1,221 @@
+'@Written by Ricci, Federico
+
+Public fila_Etiquetas As Integer 'Row of the labels, for searching through the labels the information
+Public fila_Fin As Integer 'Last row of the used range
+Public colum_Proyec As Integer 'Column of the projects in the document, will be 1
+Public colum_Familia As Integer 'Column of the wire families
+Public colum_Origen As Integer 'Column of the origin of the derog
+Public colum_Fechas As Integer 'Column of the creation dates of the derog
+Public colum_LifeState As Integer 'Column of the Life Status Cycle of the DFS
+Public colum_Derogs As Integer 'Column of the derogs indicator
+
+Public rangoGlobal_Derogs As Range 'Range of all the used range in the sheet
+
+Sub importar_DerogRegis()
+
+'
+'Macro for importing Derogs Register, with file browser
+'
+
+Dim FileBrowser As Office.FileDialog
+Dim nomFile As String
+
+Set FileBrowser = Application.FileDialog(msoFileDialogFilePicker)
+
+With FileBrowser
+
+    .Filters.Clear
+    .Title = "Select the Derog Register"
+    .AllowMultiSelect = False
+
+    If .Show = True Then
+
+        strFile = .SelectedItems(1) 'Returns the path file of the derog register
+    End If
+
+End With
+
+On Error GoTo repetida
+Sheets.Add(After:=Sheets(Sheets.Count)).Name = "Derogs" 'Creates the Derog sheet
+ActiveWorkbook.Sheets("Derogs").Tab.Color = 5296274
+
+Application.ScreenUpdating = False
+On Error GoTo Handler
+'Import the Derog sheet
+Set wb = Workbooks.Open(strFile)
+
+wb.Worksheets(1).UsedRange.Copy ThisWorkbook.Worksheets("Derogs").Range("A1")
+wb.Close
+
+Set rangoGlobal_Derogs = ActiveWorkbook.Worksheets("Derogs").UsedRange
+
+Call busqueda_referencias   'Valuates the global variables for referring to rows and columns
+Call fecha_to_semanas   'Processes the dates and transform them to weeks of the year
+
+'Change Erreur Etude electrico -> Erreur SFA/FIE
+For i = fila_Etiquetas + 1 To fila_Fin
+
+    If rangoGlobal_Derogs.Cells(i, colum_Origen) = "ELEC | Erreur etude elec/amelio qual" Then
+    
+        rangoGlobal_Derogs.Cells(i, colum_Origen) = "ELEC | Erreur SFA/FIE"
+    
+    End If
+
+Next i
+
+ActiveWorkbook.Sheets("Command").Activate
+
+Application.ScreenUpdating = True
+Exit Sub
+
+Handler:
+    Application.DisplayAlerts = False
+    ActiveWorkbook.Sheets("Derogs").Delete
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+Exit Sub
+
+repetida:
+    MsgBox ("There is already a DFS Register created, delete it to import another one")
+    Application.DisplayAlerts = False
+    ActiveWorkbook.Sheets(Sheets.Count).Delete
+    Application.DisplayAlerts = True
+Exit Sub
+End Sub
+
+Sub borrar_DerogRegis()
+
+    On Error GoTo noHayNombre
+    Application.DisplayAlerts = False
+    ActiveWorkbook.Sheets("Derogs").Delete
+    Application.DisplayAlerts = True
+
+Exit Sub
+
+noHayNombre:
+    MsgBox ("There is no DFS Register loaded")
+End Sub
+
+Sub borrar_Graphs()
+
+    On Error GoTo noHayResultado
+    Application.DisplayAlerts = False
+    ActiveWorkbook.Sheets("Graphs").Delete
+    ActiveWorkbook.Sheets("Filtered Derogs").Delete
+    Application.DisplayAlerts = True
+
+Exit Sub
+
+noHayResultado:
+    MsgBox ("There is no Graph created")
+End Sub
+
+Function busqueda_referencias()
+
+'
+'Valuates the global variables for referring to rows and columns
+'
+
+colum_Proyec = 1
+'Last row
+fila_Fin = rangoGlobal_Derogs.Rows.Count
+
+'Search of the Proyects row
+For i = 1 To fila_Fin
+
+    If rangoGlobal_Derogs.Cells(i, 1) = "Project" Then
+    
+        fila_Etiquetas = i
+        Exit For
+    
+    End If
+
+Next i
+
+'Search of the Wire Family column
+For j = 1 To rangoGlobal_Derogs.Columns.Count
+
+    If rangoGlobal_Derogs.Cells(fila_Etiquetas, j) = "Wiring Family" Then
+    
+        colum_Familia = j
+        Exit For
+    
+    End If
+
+Next j
+
+'Search of the Life Cycle State column
+For r = 1 To rangoGlobal_Derogs.Columns.Count
+
+    If rangoGlobal_Derogs.Cells(fila_Etiquetas, r) = "Life Cycle State" Then
+    
+        colum_LifeState = r
+        Exit For
+    
+    End If
+
+Next r
+
+'Search of the Origin column
+For k = 1 To rangoGlobal_Derogs.Columns.Count
+
+    If rangoGlobal_Derogs.Cells(fila_Etiquetas, k) = "Origin" Then
+    
+        colum_Origen = k
+        Exit For
+    
+    End If
+
+Next k
+
+'Search of the Creation Date column
+For l = 1 To rangoGlobal_Derogs.Columns.Count
+
+    If rangoGlobal_Derogs.Cells(fila_Etiquetas, l) = "Creation Date" Then
+    
+        colum_Fechas = l
+        Exit For
+    
+    End If
+
+Next l
+
+'Search of the Derogs column
+For t = 1 To rangoGlobal_Derogs.Columns.Count
+
+    If rangoGlobal_Derogs.Cells(fila_Etiquetas, t) = "DFCSite_Derogation_MR" Then
+    
+        colum_Derogs = t
+        Exit For
+    
+    End If
+
+Next t
+
+End Function
+
+Function fecha_to_semanas()
+
+'
+'Processes the dates and transform them to weeks of the year
+'
+Dim fecha As Date 'Aux date var for temporary storage
+
+For i = fila_Etiquetas + 1 To fila_Fin 'Loops through every row for modyfing creation date
+
+    fecha = Format(CDate(rangoGlobal_Derogs.Cells(i, colum_Fechas)), "DD/MM/YYYY") 'Casts date string to date variable
+    
+    If WorksheetFunction.WeekNum(fecha) <= 9 Then
+    
+        rangoGlobal_Derogs.Cells(i, colum_Fechas) = "S0" & WorksheetFunction.WeekNum(fecha) & Right(Year(fecha), 2)
+    
+    Else
+    
+        rangoGlobal_Derogs.Cells(i, colum_Fechas) = "S" & WorksheetFunction.WeekNum(fecha) & Right(Year(fecha), 2)
+    
+    End If
+    
+Next i
+
+End Function
+
