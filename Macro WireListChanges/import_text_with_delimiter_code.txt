@@ -1,0 +1,22 @@
+Sub Macro2()
+'
+' Macro2 Macro
+'
+
+Dim QueryName As String
+QueryName = "test"
+Dim path As String
+path = "C:\Users\pm22266\OneDrive - Alliance\Escritorio\Excel Macros\Macro WireListChanges\PruebaNEW.txt"
+ActiveWorkbook.Worksheets.Add
+Dim destRange As Range
+Set destRange = Range("A1")
+
+
+With destRange.Parent.QueryTables.Add(Connection:="TEXT;" & path, Destination:=destRange)
+.TextFileStartRow = 1
+.TextFileParseType = xlDelimited
+.TextFileCommaDelimiter = True
+.Refresh BackgroundQuery:=False
+End With
+
+End Sub
